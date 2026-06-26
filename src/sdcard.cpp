@@ -1,4 +1,4 @@
-#ifdef HAS_SDCARD
+#if (HAS_SDCARD)
 
 // routines for writing data to an SD-card, if present
 // use FAT32 formatted card

@@ -69,7 +69,7 @@ void sendData() {
 #endif
   struct count_payload_t count =
       count_from_libpax; // copy values from global libpax var
-  ESP_LOGD(TAG, "Sending count results: pax=%d / wifi=%d / ble=%d", count.pax,
+      ESP_LOGI(TAG, "Sending count results: pax=%d / wifi=%d / ble=%d", count.pax,
            count.wifi_count, count.ble_count);
 
   while (bitmask) {

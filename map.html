@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>限定範圍的台中地圖</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDAZ6qgvL-K48OH2bUKtFkiZYdbgK8xdmk"></script>
+  <script>
+    function initMap() {
+      // 設定地圖顯示的邊界範圍
+      const taipeiBounds = {
+        north: 24.14398760989248, // 北緯
+        south: 24.134,            // 南緯 (暫假設)
+        west: 120.66728539568209, // 西經
+        east: 120.69335646632445, // 東經
+      };
+
+      // 初始化地圖
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 24.137774, lng: 120.686979 }, // 臺中火車站
+        zoom: 15,
+        restriction: {
+          latLngBounds: taipeiBounds, // 設置限制範圍
+          strictBounds: false, // 是否允許地圖拖動到範圍外
+        },
+      });
+
+      // 添加交通狀況圖層
+      const trafficLayer = new google.maps.TrafficLayer();
+      trafficLayer.setMap(map);
+
+      // 店家位置資料
+      const stores = [
+        { name: "臺中火車站", position: { lat: 24.137774, lng: 120.686979 }, status: "green" },
+        { name: "台中市第二市場六角樓", position: { lat: 24.143763, lng: 120.679720 }, status: "orange" },
+        { name: "臺灣府儒考棚", position: { lat: 24.137253, lng: 120.676926 }, status: "red" },
+        { name: "中山73影視藝文空間", position: { lat: 24.1413, lng: 120.6826 }, status: "green" },
+      ];
+
+      // 添加店家標記
+      stores.forEach(store => {
+        const marker = new google.maps.Marker({
+          position: store.position,
+          map: map,
+          title: store.name,
+          icon: {
+            url: `http://maps.google.com/mapfiles/ms/icons/${store.status}-dot.png`, // 根據狀態顯示顏色
+          },
+        });
+      });
+
+      // 繪製路線
+      const directionsService = new google.maps.DirectionsService();
+      const directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true }); // 隱藏預設的標記
+      directionsRenderer.setMap(map);
+
+      const request = {
+        origin: { lat: 24.137774, lng: 120.686979 }, // 起點：臺中火車站
+        destination: { lat: 24.137774, lng: 120.686979 }, // 終點：臺中火車站
+        travelMode: 'DRIVING', // 可選：DRIVING, WALKING, BICYCLING, TRANSIT
+        waypoints: [
+          { location: { lat: 24.143763, lng: 120.679720 }, stopover: true }, // 台中市第二市場六角樓
+          { location: { lat: 24.137253, lng: 120.676926 }, stopover: true }, // 臺灣府儒考棚
+                    { location: { lat: 24.1413, lng: 120.6826 }, stopover: true }, //中山73影視藝文空間
+        ],
+        optimizeWaypoints: false, // 不優化途經點順序
+      };
+
+      directionsService.route(request, (result, status) => {
+        if (status === 'OK') {
+          directionsRenderer.setDirections(result);
+        } else {
+          console.error('無法獲取路線:', status);
+        }
+      });
+    }
+  </script>
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body onload="initMap()">
+  <div id="map"></div>
+</body>
+</html>
