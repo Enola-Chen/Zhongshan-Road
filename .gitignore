@@ -14,3 +14,4 @@ shared/loraconf.h
 shared/ota.conf
 platformio.ini
 shared/paxcounter.conf
+node_modules/

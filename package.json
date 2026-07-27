@@ -1,0 +1,31 @@
+{
+  "name": "esp32-paxcounter",
+  "version": "1.0.0",
+  "description": "![logo](docs/assets/paxcounter_logo_white.png)",
+  "main": "server.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyberman54/ESP32-Paxcounter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/cyberman54/ESP32-Paxcounter/issues"
+  },
+  "homepage": "https://github.com/cyberman54/ESP32-Paxcounter#readme",
+  "dependencies": {
+    "body-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}
