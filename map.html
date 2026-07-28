@@ -4,73 +4,264 @@
   <title>限定範圍的台中地圖</title>
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDAZ6qgvL-K48OH2bUKtFkiZYdbgK8xdmk"></script>
   <script>
+    const FIREBASE_DB_URL = "https://citywalk-1369c-default-rtdb.firebaseio.com";
+
+    function statusFromPax(pax, greenMax, yellowMax) {
+      if (pax <= greenMax) return "green";
+      if (pax <= yellowMax) return "yellow";
+      return "red";
+    }
+
     function initMap() {
-      // 設定地圖顯示的邊界範圍
-      const taipeiBounds = {
-        north: 24.14398760989248, // 北緯
-        south: 24.134,            // 南緯 (暫假設)
-        west: 120.66728539568209, // 西經
-        east: 120.69335646632445, // 東經
+      const mapBounds = {
+        north: 24.1455,
+        south: 24.134,
+        west: 120.66728539568209,
+        east: 120.69335646632445,
       };
 
-      // 初始化地圖
       const map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 24.137774, lng: 120.686979 }, // 臺中火車站
+        center: { lat: 24.137774, lng: 120.686979 },
         zoom: 15,
         restriction: {
-          latLngBounds: taipeiBounds, // 設置限制範圍
-          strictBounds: false, // 是否允許地圖拖動到範圍外
+          latLngBounds: mapBounds,
+          strictBounds: false,
         },
       });
 
-      // 添加交通狀況圖層
       const trafficLayer = new google.maps.TrafficLayer();
       trafficLayer.setMap(map);
 
-      // 店家位置資料
-      const stores = [
-        { name: "臺中火車站", position: { lat: 24.137774, lng: 120.686979 }, status: "green" },
-        { name: "台中市第二市場六角樓", position: { lat: 24.143763, lng: 120.679720 }, status: "orange" },
-        { name: "臺灣府儒考棚", position: { lat: 24.137253, lng: 120.676926 }, status: "red" },
-        { name: "中山73影視藝文空間", position: { lat: 24.1413, lng: 120.6826 }, status: "green" },
+      // 第二市場區域（固定綠色，無獨立大圖標）
+      // 順時針：北 → 東 → 南 → 西（避免交叉成蝴蝶結）
+      const secondMarketPath = [
+        { lat: 24.142972475172183, lng: 120.67878518757101 }, // 北
+        { lat: 24.14246825572097, lng: 120.67932742824526 },  // 東
+        { lat: 24.141878933795326, lng: 120.67871196055184 }, // 南
+        { lat: 24.142471764732413, lng: 120.6780456392032 },  // 西
       ];
 
-      // 添加店家標記
-      stores.forEach(store => {
-        const marker = new google.maps.Marker({
+      // 第二市場藍線固定接到此座標（與圖標同一點）
+      const SECOND_MARKET_POS = {
+        lat: 24.14241985877383,
+        lng: 120.67875589233508,
+      };
+
+      new google.maps.Polygon({
+        paths: secondMarketPath,
+        strokeColor: "#3DAA6C",
+        strokeOpacity: 0.95,
+        strokeWeight: 2,
+        fillColor: "#3DAA6C",
+        fillOpacity: 0.22,
+        map: map,
+        clickable: false,
+      });
+
+      // fixedStatus: 固定綠色；small: 店內攤位小圖標；inSecondMarket: 藍線改接「第二市場」
+      const stores = [
+        {
+          name: "第二市場",
+          position: SECOND_MARKET_POS,
+          status: "green",
+          fixedStatus: true,
+          small: false,
+        },
+        {
+          name: "臺中火車站",
+          position: { lat: 24.137305484978285, lng: 120.68692259090831 },
+          status: "green",
+          fixedStatus: true,
+          small: false,
+        },
+        {
+          name: "臺灣府儒考棚",
+          position: { lat: 24.137092790983086, lng: 120.67683909873158 },
+          status: "green",
+          fixedStatus: true,
+          small: false,
+        },
+        {
+          name: "中山73影視藝文空間",
+          position: { lat: 24.138805115263395, lng: 120.68178517678848 },
+          status: "green",
+          fixedStatus: true,
+          small: false,
+        },
+        {
+          name: "六角樓",
+          position: { lat: 24.142451013125296, lng: 120.67873426297908 },
+          status: "green",
+          fixedStatus: true,
+          small: true,
+          inSecondMarket: true,
+        },
+        {
+          name: "阿嬤ㄟ店",
+          position: { lat: 24.142503586069438, lng: 120.67863528769092 },
+          status: "red",
+          fixedStatus: false,
+          small: true,
+          inSecondMarket: true,
+          stationId: "amade",
+          capacity: 8,
+          greenMax: 4,
+          yellowMax: 7,
+          pax: 0,
+        },
+        {
+          name: "嵐肉燥",
+          position: { lat: 24.142526921297204, lng: 120.67898223366706 },
+          status: "yellow",
+          fixedStatus: false,
+          small: true,
+          inSecondMarket: true,
+          stationId: "lan_rouzhao",
+          capacity: 15,
+          greenMax: 9,
+          yellowMax: 14,
+          pax: 0,
+        },
+      ];
+
+      function createPinIcon(status, name, small) {
+        const colorMap = {
+          red: "#E8453C",
+          yellow: "#F5C518",
+          orange: "#FF8C00",
+          green: "#3DAA6C",
+        };
+        const fill = colorMap[status] || "#E8453C";
+        const scale = small ? 0.62 : 1;
+
+        const r = 16 * scale;
+        const pinCy = 19 * scale;
+        const tipY = 50 * scale;
+        const charW = (small ? 9 : 12) * scale;
+        const labelPad = (small ? 12 : 18) * scale;
+        const fontSize = small ? 9 : 11.5;
+        const labelH = (small ? 16 : 21) * scale;
+        const W = Math.ceil(Math.max(name.length * charW + labelPad * 2, r * 2 + 10));
+        const cx = W / 2;
+        const labelY = tipY + 6 * scale;
+        const totalH = labelY + labelH + 2;
+
+        const path = [
+          `M ${cx} ${tipY}`,
+          `C ${cx - 11 * scale} ${tipY - 11 * scale} ${cx - r} ${pinCy + 10 * scale} ${cx - r} ${pinCy}`,
+          `A ${r} ${r} 0 1 1 ${cx + r} ${pinCy}`,
+          `C ${cx + r} ${pinCy + 10 * scale} ${cx + 11 * scale} ${tipY - 11 * scale} ${cx} ${tipY} Z`,
+        ].join(" ");
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${totalH}">
+  <path d="${path}" fill="${fill}" stroke="none"/>
+  <ellipse cx="${cx - 5 * scale}" cy="${pinCy - 7 * scale}" rx="${5 * scale}" ry="${3.5 * scale}" fill="rgba(255,255,255,0.35)" stroke="none"/>
+  <circle cx="${cx}" cy="${pinCy}" r="${5.5 * scale}" fill="white" stroke="none" opacity="0.9"/>
+  <rect x="1" y="${labelY}" width="${W - 2}" height="${labelH}" rx="${labelH / 2}" fill="white" stroke="none" opacity="0.93"/>
+  <text x="${cx}" y="${labelY + labelH * 0.72}"
+    font-family="'Microsoft JhengHei','PingFang TC',Arial,sans-serif"
+    font-size="${fontSize}" font-weight="bold" text-anchor="middle"
+    fill="#1a1a1a" stroke="none">${name}</text>
+</svg>`;
+
+        return {
+          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg),
+          scaledSize: new google.maps.Size(W, totalH),
+          anchor: new google.maps.Point(cx, tipY),
+        };
+      }
+
+      stores.forEach((store) => {
+        if (!store.fixedStatus && store.greenMax != null) {
+          store.status = statusFromPax(store.pax || 0, store.greenMax, store.yellowMax);
+        }
+
+        store.marker = new google.maps.Marker({
           position: store.position,
           map: map,
           title: store.name,
-          icon: {
-            url: `http://maps.google.com/mapfiles/ms/icons/${store.status}-dot.png`, // 根據狀態顯示顏色
-          },
+          icon: createPinIcon(store.status, store.name, store.small),
+          zIndex: store.small ? 10 : 5,
         });
       });
 
-      // 繪製路線
+      async function refreshSensorStatuses() {
+        const sensorStores = stores.filter((s) => s.stationId && !s.fixedStatus);
+        await Promise.all(
+          sensorStores.map(async (store) => {
+            try {
+              const res = await fetch(
+                `${FIREBASE_DB_URL}/devices/${store.stationId}.json`
+              );
+              if (!res.ok) return;
+              const data = await res.json();
+              if (!data || typeof data.pax !== "number") return;
+
+              store.pax = data.pax;
+              const next = statusFromPax(store.pax, store.greenMax, store.yellowMax);
+              if (next === store.status) return;
+              store.status = next;
+              store.marker.setIcon(createPinIcon(store.status, store.name, store.small));
+              store.marker.setTitle(`${store.name}（${store.pax} 人）`);
+            } catch (err) {
+              console.warn("讀取感測器失敗:", store.stationId, err);
+            }
+          })
+        );
+      }
+
+      refreshSensorStatuses();
+      setInterval(refreshSensorStatuses, 60000);//每分鐘更新一次人數
+
       const directionsService = new google.maps.DirectionsService();
-      const directionsRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true }); // 隱藏預設的標記
+      const directionsRenderer = new google.maps.DirectionsRenderer({
+        suppressMarkers: true,
+      });
       directionsRenderer.setMap(map);
 
-      const request = {
-        origin: { lat: 24.137774, lng: 120.686979 }, // 起點：臺中火車站
-        destination: { lat: 24.137774, lng: 120.686979 }, // 終點：臺中火車站
-        travelMode: 'DRIVING', // 可選：DRIVING, WALKING, BICYCLING, TRANSIT
-        waypoints: [
-          { location: { lat: 24.143763, lng: 120.679720 }, stopover: true }, // 台中市第二市場六角樓
-          { location: { lat: 24.137253, lng: 120.676926 }, stopover: true }, // 臺灣府儒考棚
-                    { location: { lat: 24.1413, lng: 120.6826 }, stopover: true }, //中山73影視藝文空間
-        ],
-        optimizeWaypoints: false, // 不優化途經點順序
-      };
+      // 參觀順序；場內店家藍線一律接到「第二市場」座標
+      const routeOrder = [
+        "臺灣府儒考棚",
+        "第二市場",
+        "中山73影視藝文空間",
+        "臺中火車站",
+      ];
 
-      directionsService.route(request, (result, status) => {
-        if (status === 'OK') {
-          directionsRenderer.setDirections(result);
-        } else {
-          console.error('無法獲取路線:', status);
+      const routePoints = [];
+      let marketStopAdded = false;
+      routeOrder.forEach((name) => {
+        const store = stores.find((s) => s.name === name);
+        if (!store) return;
+        if (store.inSecondMarket || store.name === "第二市場") {
+          if (!marketStopAdded) {
+            routePoints.push(SECOND_MARKET_POS);
+            marketStopAdded = true;
+          }
+          return;
         }
+        routePoints.push(store.position);
       });
+
+      if (routePoints.length >= 2) {
+        const request = {
+          origin: routePoints[0],
+          destination: routePoints[routePoints.length - 1],
+          travelMode: "WALKING",
+          waypoints: routePoints.slice(1, -1).map((location) => ({
+            location,
+            stopover: true,
+          })),
+          optimizeWaypoints: false,
+        };
+
+        directionsService.route(request, (result, status) => {
+          if (status === "OK") {
+            directionsRenderer.setDirections(result);
+          } else {
+            console.error("無法獲取路線:", status);
+          }
+        });
+      }
     }
   </script>
   <style>

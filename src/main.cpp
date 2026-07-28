@@ -284,6 +284,9 @@ void setup() {
   if (RTC_runmode == RUNMODE_MAINTENANCE)
     start_boot_menu();
 
+  // connect to WiFi and start Firebase upload task
+  firebase_init();
+
   // start libpax lib (includes timer to trigger cyclic senddata)
   ESP_LOGI(TAG, "Starting libpax...");
   struct libpax_config_t configuration;

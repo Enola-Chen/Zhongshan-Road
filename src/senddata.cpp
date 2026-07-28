@@ -1,5 +1,6 @@
 // Basic Config
 #include "senddata.h"
+#include "firebase_upload.h"
 
 // void setSendIRQ(TimerHandle_t xTimer) {
 //  xTaskNotify(irqHandlerTask, SENDCYCLE_IRQ, eSetBits);
@@ -71,6 +72,7 @@ void sendData() {
       count_from_libpax; // copy values from global libpax var
       ESP_LOGI(TAG, "Sending count results: pax=%d / wifi=%d / ble=%d", count.pax,
            count.wifi_count, count.ble_count);
+  firebase_upload(count.wifi_count, count.ble_count, count.pax);
 
   while (bitmask) {
     switch (bitmask & mask) {

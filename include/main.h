@@ -24,5 +24,6 @@
 #include "power.h"
 #include "antenna.h"
 #include "button.h"
+#include "firebase_upload.h"
 
 #endif
